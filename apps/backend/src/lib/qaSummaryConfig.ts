@@ -10,7 +10,7 @@ import { QA_SUMMARY_MIN_VISIBLE_QUESTIONS } from '@arsnova/shared-types';
 
 export const QA_SUMMARY_TIMEOUT_DEFAULT_MS = 8_000;
 export const QA_SUMMARY_TIMEOUT_MIN_MS = 500;
-export const QA_SUMMARY_TIMEOUT_MAX_MS = 30_000;
+export const QA_SUMMARY_TIMEOUT_MAX_MS = 180_000;
 export const QA_SUMMARY_QUEUE_LIMIT_DEFAULT = 8;
 export const QA_SUMMARY_QUEUE_LIMIT_MIN = 1;
 export const QA_SUMMARY_QUEUE_LIMIT_MAX = 32;
