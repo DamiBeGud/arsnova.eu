@@ -34,6 +34,17 @@ describe('qaSummaryConfig', () => {
     expect(() => resolveQaSummaryTimeoutMs('100')).toThrow(/zwischen/);
   });
 
+  it('erlaubt explizite CPU-Summary-Budgets bis 180 Sekunden bei unverändertem Default', () => {
+    expect(resolveQaSummaryTimeoutMs(undefined)).toBe(8_000);
+    expect(resolveQaSummaryTimeoutMs('500')).toBe(500);
+    expect(resolveQaSummaryTimeoutMs('30000')).toBe(30_000);
+    expect(resolveQaSummaryTimeoutMs('90000')).toBe(90_000);
+    expect(resolveQaSummaryTimeoutMs('180000')).toBe(180_000);
+    expect(resolveQaSummaryConfig({ QA_SUMMARY_TIMEOUT_MS: '180000' }).timeoutMs).toBe(180_000);
+    expect(() => resolveQaSummaryTimeoutMs('180001')).toThrow(/zwischen 500 und 180000/);
+    expect(() => resolveQaSummaryTimeoutMs('999999')).toThrow(/zwischen 500 und 180000/);
+  });
+
   it('laesst QA_SUMMARY_MAX_SOURCES nicht unter die Frageschwelle fallen', () => {
     expect(resolveQaSummaryMaxSources(undefined)).toBe(20);
     expect(resolveQaSummaryMaxSources('3')).toBe(3);
