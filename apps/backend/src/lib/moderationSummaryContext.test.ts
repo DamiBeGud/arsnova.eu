@@ -60,19 +60,48 @@ describe('moderationSummaryContext', () => {
     ).toBeLessThanOrEqual(QA_SUMMARY_MODERATION_PACKING_PROFILE.contextWindowTokens);
   });
 
-  it('degradiert einen zu großen Metadaten-Basiskontext sichtbar auf die Q&A-Textbaseline', () => {
+  it('erhält drei priorisierte Referenzfragen und zusätzliche Quellen im größeren Budget', () => {
     const prepared = prepareModerationSummaryContextFromAnalysis({
       analysis: analysisFixture(MODERATION_PROMPT_CONTEXT_REFERENCE_FIXTURE_V1),
       plan,
     });
-    expect(prepared.request.promptContext.context.sources).toHaveLength(1);
-    expect(prepared.request.promptContext.context.sources[0]?.kind).toBe('qa-question');
+    const sources = prepared.request.promptContext.context.sources;
+    expect(sources).toHaveLength(6);
+    expect(sources.some((source) => source.kind === 'learning-objective')).toBe(true);
+    const questions = prepared.request.promptContext.context.questions;
+    expect(questions.state).toBe('available');
+    if (questions.state !== 'available') throw new Error('Expected packed questions.');
+    expect(questions.corpus.represented).toBe(3);
+    expect(questions.items.map((question) => question.sourceId)).toEqual([
+      'qa-question:11111111-1111-4111-8111-111111111111',
+      'qa-question:33333333-3333-4333-8333-333333333333',
+      'qa-question:55555555-5555-4555-8555-555555555555',
+    ]);
     expect(prepared.request.promptContext.context.limitations).toContainEqual(
       expect.objectContaining({ code: 'budget-truncated', section: 'topics' }),
     );
     expect(prepared.request.promptContext.budget.truncations).toContainEqual(
-      expect.objectContaining({ section: 'questions', reason: 'token-budget' }),
+      expect.objectContaining({ section: 'questions', omittedItems: 3, reason: 'token-budget' }),
     );
+  });
+
+  it('fällt bei weiterhin übergroßen Metadaten auf die quellengebundene Textprojektion zurück', () => {
+    const analysis = analysisFixture(MODERATION_PROMPT_CONTEXT_REFERENCE_FIXTURE_V1);
+    analysis.context.limitations = Array.from({ length: 80 }, (_, index) => ({
+      code: 'budget-truncated' as const,
+      section: 'topics' as const,
+      detail: `${index}: ${'Zusätzliche Metadaten. '.repeat(10)}`,
+    }));
+    const prepared = prepareModerationSummaryContextFromAnalysis({ analysis, plan });
+    const packed = prepared.request.promptContext;
+    expect(packed.context.sources).toHaveLength(6);
+    expect(packed.context.sources.every((source) => source.kind === 'qa-question')).toBe(true);
+    expect(packed.context.topics.state).toBe('disabled');
+    expect(
+      packed.budget.packedInputTokens +
+        packed.budget.reservedOutputTokens +
+        packed.budget.safetyMarginTokens,
+    ).toBeLessThanOrEqual(8_192);
   });
 
   it('verwendet für Vorschau und Auftrag dasselbe gepackte Objekt ohne technische Prompttexte', () => {
